@@ -5,7 +5,7 @@ from scipy.signal import savgol_filter
 
 
 
-def readcsv( filepath ):
+def readcsv( filepath, timeAbsolute=False ):
     ''' Read the csv file and return a dictionnary
         the csv is in the format from the app PhysicsToolbox 
     '''
@@ -27,12 +27,23 @@ def readcsv( filepath ):
     header = rawdata.pop(0)
     columns = list( zip( *rawdata ) )
     
-    def convert( col ):
-        col = [ float(v) for v in col ]
+    def parseDate( dateStr ):
+        # parse the string from the '19:26:49:691' format
+        h, m, s, ms = [float(u) for u in dateStr.split(':')]
+        
+        totalinseconds = ((h*60 + m)*60 + s) + ms/1000
+        return totalinseconds
+    
+    def convert( key, col ):
+        if key == 'time' and timeAbsolute==True:
+            col = [ parseDate(v) for v in col ]
+        else:
+            col = [ float(v) for v in col ]
+            
         col = np.array( col )
         return col
     
-    data = { key:convert(values) for key, values in zip(header, columns) }
+    data = { key:convert(key, values) for key, values in zip(header, columns) }
     
     return data
 
@@ -45,8 +56,9 @@ class Measure(  ):
             - data is a dict
         '''
         self.data = data
+        self.data['time'] = self.data['time'] - self.data['time'][0]
         
-        self.time = data['time']
+        self.time = data['time'] 
         
         self.gFx = data['gFx']
         self.gFy = data['gFy']
